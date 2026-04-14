@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Roto Calc"/>
+  <meta name="theme-color" content="#fffbeb"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <title>Roto Film Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; width: 100%; overflow: hidden; background: #fffbeb; font-family: 'Segoe UI', Arial, sans-serif; color: #431a03; }
+
+    /* ===== PAGES ===== */
+    .page { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: none; flex-direction: column; background: linear-gradient(160deg, #fffbeb 0%, #fef3c7 60%, #fff8e1 100%); }
+    .page.active { display: flex; }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      display: flex; flex-shrink: 0;
+      background: #fff;
+      border-top: 1px solid #fde68a;
+      box-shadow: 0 -2px 12px rgba(180,83,9,0.08);
+    }
+    .nav-btn {
+      flex: 1; border: none; background: transparent;
+      padding: 8px 4px 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .nav-btn.active { background: #fffbeb; }
+    .nav-btn .nav-icon { font-size: 20px; }
+    .nav-btn .nav-label { font-size: 9px; font-weight: 700; color: #9ca3af; letter-spacing: 0.5px; }
+    .nav-btn.active .nav-label { color: #b45309; }
+    .nav-btn .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: #d97706; display: none; }
+    .nav-btn.active .nav-dot { display: block; }
+
+    /* ===== HEADER ===== */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #b45309, #d97706);
+      border-radius: 0 0 18px 18px;
+      padding: 12px 16px 14px;
+      box-shadow: 0 4px 20px rgba(180,83,9,0.25);
+    }
+    .header-left h1 { font-size: 16px; font-weight: 800; color: #fff; }
+    .header-left p { font-size: 9px; color: rgba(255,255,255,0.65); margin-top: 1px; }
+    .header-badge {
+      background: rgba(255,255,255,0.2); border-radius: 10px;
+      padding: 4px 10px; font-size: 10px; font-weight: 700; color: #fff;
+    }
+
+    /* ===== CONTENT ===== */
+    .content { flex: 1; overflow-y: auto; padding: 10px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .content::-webkit-scrollbar { display: none; }
+
+    /* ===== CARD ===== */
+    .card { background: #fff; border: 1px solid rgba(180,83,9,0.12); border-radius: 14px; padding: 10px 12px; flex-shrink: 0; box-shadow: 0 2px 12px rgba(180,83,9,0.07); }
+    .field-label { color: #92400e; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-bottom: 6px; font-weight: 700; }
+
+    /* ===== SELECT ===== */
+    .select-wrapper { position: relative; }
+    .select-box { background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 10px; padding: 9px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .sel-name { color: #b45309; font-weight: 700; font-size: 13px; }
+    .sel-arrow { color: #d97706; font-size: 11px; transition: transform 0.2s; }
+    .select-box.open .sel-arrow { transform: rotate(180deg); }
+    .density-badge { display: inline-flex; align-items: center; gap: 5px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 20px; padding: 3px 10px; margin-top: 6px; }
+    .d-label { color: #d97706; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+    .d-val { color: #b45309; font-weight: 800; font-size: 13px; }
+    .d-unit { color: #9ca3af; font-size: 9px; }
+    .dropdown-list { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 3px); background: #fff; border: 1.5px solid #fcd34d; border-radius: 12px; max-height: 180px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 30px rgba(180,83,9,0.15); }
+    .dropdown-list.open { display: block; }
+    .dropdown-list::-webkit-scrollbar { width: 3px; }
+    .dropdown-list::-webkit-scrollbar-thumb { background: #fcd34d; border-radius: 3px; }
+    .dropdown-item { padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item.active { background: #fef3c7; }
+    .item-name { color: #374151; font-size: 13px; font-weight: 500; }
+    .item-den { color: #d97706; font-size: 11px; font-weight: 700; }
+
+    /* ===== INPUTS ===== */
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .input-field { width: 100%; background: #fafafa; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 8px 10px; color: #431a03; font-size: 14px; font-weight: 600; outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+    .input-field:focus { border-color: #f59e0b; background: #fffbeb; }
+    .input-field::placeholder { color: #d1d5db; font-weight: 400; font-size: 11px; }
+
+    /* ===== FILM CALC: CONVERT ROW ===== */
+    .convert-row { display: grid; grid-template-columns: 1fr 22px 1fr; align-items: center; gap: 5px; }
+    .convert-side { display: flex; flex-direction: column; gap: 4px; }
+    .convert-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-align: center; }
+    .kg-label { color: #2563eb; }
+    .meter-label { color: #059669; }
+    .big-input-wrap { position: relative; }
+    .big-input { width: 100%; border-radius: 10px; padding: 9px 30px 9px 10px; font-size: 15px; font-weight: 700; outline: none; appearance: none; -webkit-appearance: none; text-align: center; transition: all 0.2s; }
+    .kg-input { background: #eff6ff; border: 1.5px solid #93c5fd; color: #1d4ed8; }
+    .kg-input:focus { border-color: #2563eb; background: #dbeafe; }
+    .meter-input { background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #065f46; }
+    .meter-input:focus { border-color: #059669; background: #d1fae5; }
+    .big-input::placeholder { color: #d1d5db; font-weight: 400; font-size: 10px; }
+    .input-unit { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 9px; }
+    .kg-unit { color: #2563eb; }
+    .meter-unit { color: #059669; }
+    .arrow-divider { text-align: center; font-size: 15px; color: #f59e0b; }
+
+    /* ===== FILM RESULT ===== */
+    .result-card { flex: 1; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 120px; }
+    .result-card.empty { background: #fff; border: 1.5px dashed #fcd34d; align-items: center; justify-content: center; color: #fbbf24; font-size: 12px; line-height: 2; text-align: center; box-shadow: 0 2px 12px rgba(180,83,9,0.06); }
+    .result-card.filled { background: #fff; border: 1.5px solid rgba(180,83,9,0.15); box-shadow: 0 4px 20px rgba(180,83,9,0.1); animation: popIn 0.25s ease; }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    .res-top { display: grid; grid-template-columns: 1fr 1px 1fr; flex-shrink: 0; padding: 10px 8px 8px; }
+    .res-divider-v { background: #f3f4f6; }
+    .res-item { text-align: center; padding: 0 6px; }
+    .res-item-label { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: #9ca3af; font-weight: 700; margin-bottom: 3px; }
+    .res-item-val { font-size: 26px; font-weight: 900; line-height: 1; }
+    .res-item-unit { font-size: 10px; font-weight: 700; margin-left: 2px; }
+    .kg-res-val { color: #2563eb; } .kg-res-unit { color: #93c5fd; }
+    .meter-res-val { color: #059669; } .meter-res-unit { color: #6ee7b7; }
+    .res-divider-h { height: 1px; background: #f3f4f6; margin: 0 12px; }
+    .rate-box { flex: 1; padding: 8px 12px 10px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .rate-title { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #6b7280; display: flex; align-items: center; gap: 5px; }
+    .rate-title-dot { width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, #b45309, #d97706); }
+    .gauge-wrap { background: #f3f4f6; border-radius: 99px; height: 10px; position: relative; overflow: hidden; }
+    .gauge-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); background: linear-gradient(90deg, #fbbf24, #b45309); position: relative; }
+    .gauge-fill::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 6px; background: rgba(255,255,255,0.5); border-radius: 99px; }
+    .gauge-labels { display: flex; justify-content: space-between; margin-top: 3px; }
+    .gauge-label { font-size: 8px; color: #9ca3af; font-weight: 600; }
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .stat-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 6px 8px; text-align: center; }
+    .stat-label { font-size: 8px; color: #92400e; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .stat-val { font-size: 13px; font-weight: 800; color: #b45309; margin-top: 1px; }
+    .stat-unit { font-size: 8px; color: #d97706; font-weight: 600; }
+
+    /* ===== GSM CALCULATOR ===== */
+    .gsm-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .gsm-input-wrap { position: relative; }
+    .gsm-input {
+      width: 100%; background: #fafafa; border: 1.5px solid #e5e7eb;
+      border-radius: 10px; padding: 10px 38px 10px 12px;
+      color: #431a03; font-size: 15px; font-weight: 700;
+      outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s;
+    }
+    .gsm-input:focus { border-color: #f59e0b; background: #fffbeb; }
+    .gsm-input::placeholder { color: #d1d5db; font-weight: 400; font-size: 11px; }
+    .gsm-unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 800; color: #d97706; }
+
+    /* UNWINDER / REWINDER special */
+    .roll-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .roll-box { border-radius: 12px; padding: 8px 10px; }
+    .roll-box.unwind { background: #eff6ff; border: 1.5px solid #93c5fd; }
+    .roll-box.rewind { background: #ecfdf5; border: 1.5px solid #6ee7b7; }
+    .roll-box-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .roll-box.unwind .roll-box-label { color: #2563eb; }
+    .roll-box.rewind .roll-box-label { color: #059669; }
+    .roll-input { width: 100%; background: transparent; border: none; outline: none; font-size: 16px; font-weight: 800; color: inherit; appearance: none; -webkit-appearance: none; }
+    .roll-input::placeholder { color: rgba(0,0,0,0.15); font-weight: 400; font-size: 12px; }
+    .roll-box.unwind .roll-input { color: #1d4ed8; }
+    .roll-box.rewind .roll-input { color: #065f46; }
+    .roll-unit { font-size: 10px; font-weight: 700; margin-top: 1px; }
+    .roll-box.unwind .roll-unit { color: #93c5fd; }
+    .roll-box.rewind .roll-unit { color: #6ee7b7; }
+
+    /* GSM RESULT */
+    .gsm-result { flex: 1; min-height: 130px; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+    .gsm-result.empty { background: #fff; border: 1.5px dashed #fcd34d; align-items: center; justify-content: center; color: #fbbf24; font-size: 12px; line-height: 2; text-align: center; }
+    .gsm-result.filled { background: #fff; border: 1.5px solid rgba(180,83,9,0.15); box-shadow: 0 4px 20px rgba(180,83,9,0.1); animation: popIn 0.25s ease; padding: 12px; }
+
+    .gsm-main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .gsm-big-box { border-radius: 12px; padding: 10px 12px; text-align: center; }
+    .gsm-big-box.sqm { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd; }
+    .gsm-big-box.gsm { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1.5px solid #fbbf24; }
+    .gsm-box-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .gsm-big-box.sqm .gsm-box-label { color: #2563eb; }
+    .gsm-big-box.gsm .gsm-box-label { color: #b45309; }
+    .gsm-big-val { font-size: 28px; font-weight: 900; line-height: 1; }
+    .gsm-big-box.sqm .gsm-big-val { color: #1d4ed8; }
+    .gsm-big-box.gsm .gsm-big-val { color: #92400e; }
+    .gsm-big-unit { font-size: 11px; font-weight: 700; margin-left: 2px; }
+    .gsm-big-box.sqm .gsm-big-unit { color: #93c5fd; }
+    .gsm-big-box.gsm .gsm-big-unit { color: #fbbf24; }
+
+    .gsm-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .gsm-stat { background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 6px 8px; text-align: center; }
+    .gsm-stat-label { font-size: 8px; color: #92400e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .gsm-stat-val { font-size: 13px; font-weight: 800; color: #b45309; margin-top: 2px; }
+    .gsm-stat-unit { font-size: 8px; color: #d97706; font-weight: 600; }
+
+    /* ink weight diff highlight */
+    .ink-box { background: linear-gradient(135deg, #fdf2f8, #fce7f3); border: 1.5px solid #f9a8d4; border-radius: 12px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 0; }
+    .ink-label { font-size: 10px; font-weight: 700; color: #9d174d; letter-spacing: 0.5px; }
+    .ink-val { font-size: 18px; font-weight: 900; color: #be185d; }
+    .ink-unit { font-size: 10px; font-weight: 700; color: #f9a8d4; margin-left: 3px; }
+
+    /* ===== MASTER LIST ===== */
+    .master-header-bar {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, #b45309, #d97706);
+      border-radius: 0 0 18px 18px; padding: 12px 16px 14px;
+      box-shadow: 0 4px 20px rgba(180,83,9,0.25);
+    }
+    .master-header-bar h2 { font-size: 15px; font-weight: 800; color: #fff; }
+    .master-header-bar p { font-size: 9px; color: rgba(255,255,255,0.65); }
+
+    .add-form { background: #fff; border: 1px solid rgba(180,83,9,0.12); border-radius: 14px; padding: 12px; box-shadow: 0 2px 12px rgba(180,83,9,0.07); flex-shrink: 0; }
+    .add-form-title { font-size: 10px; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .add-row { display: grid; grid-template-columns: 1fr 100px 44px; gap: 6px; align-items: center; }
+    .add-input { width: 100%; background: #fafafa; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 8px 10px; color: #431a03; font-size: 13px; font-weight: 600; outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+    .add-input:focus { border-color: #f59e0b; background: #fffbeb; }
+    .add-input::placeholder { color: #d1d5db; font-weight: 400; font-size: 11px; }
+    .add-btn { width: 44px; height: 38px; background: linear-gradient(135deg, #b45309, #d97706); border: none; border-radius: 9px; color: #fff; font-size: 22px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(180,83,9,0.3); }
+
+    .mat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .mat-list::-webkit-scrollbar { display: none; }
+    .mat-item { background: #fff; border: 1px solid rgba(180,83,9,0.1); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 6px rgba(180,83,9,0.06); animation: slideIn 0.2s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .mat-item-left { flex: 1; }
+    .mat-item-name { font-size: 13px; font-weight: 700; color: #431a03; }
+    .mat-item-den { font-size: 11px; color: #d97706; font-weight: 600; margin-top: 2px; }
+    .mat-item-right { display: flex; gap: 6px; }
+    .edit-btn, .del-btn { width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .edit-btn { background: #fef3c7; color: #b45309; }
+    .del-btn { background: #fee2e2; color: #dc2626; }
+    .mat-item.editing { background: #fffbeb; border-color: #fcd34d; }
+    .edit-row { display: grid; grid-template-columns: 1fr 90px 30px 30px; gap: 5px; align-items: center; width: 100%; }
+    .save-btn { background: #d1fae5; color: #065f46; width: 30px; height: 34px; border: none; border-radius: 7px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .cancel-btn { background: #fee2e2; color: #dc2626; width: 30px; height: 34px; border: none; border-radius: 7px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .empty-list { text-align: center; color: #fbbf24; font-size: 12px; padding: 30px 0; line-height: 2; }
+
+    
+
+    
+    /* ===== HISTORY ===== */
+    /* ===== SETTINGS ===== */
+    .settings-header { flex-shrink:0; background:linear-gradient(135deg,#b45309,#d97706); border-radius:0 0 18px 18px; padding:12px 16px 14px; box-shadow:0 4px 20px rgba(180,83,9,0.25); }
+    .settings-header h2 { font-size:16px; font-weight:800; color:#fff; }
+    .settings-header p { font-size:9px; color:rgba(255,255,255,0.65); margin-top:1px; }
+    .settings-section-title { font-size:10px; font-weight:700; color:#92400e; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:12px; }
+    .theme-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .theme-swatch { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+    .theme-circle { width:50px; height:50px; border-radius:50%; border:3px solid transparent; box-shadow:0 2px 8px rgba(0,0,0,0.12); position:relative; transition:all 0.2s; }
+    .theme-circle.selected { border-color:#1f2937; box-shadow:0 0 0 2px #fff,0 0 0 4px #1f2937; }
+    .theme-circle::after { content:'✓'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#fff; font-size:18px; font-weight:900; display:none; }
+    .theme-circle.selected::after { display:block; }
+    .theme-name { font-size:9px; font-weight:700; color:#6b7280; text-align:center; }
+
+    .hist-header { flex-shrink:0; background:linear-gradient(135deg,#b45309,#d97706); border-radius:0 0 18px 18px; padding:12px 16px 14px; box-shadow:0 4px 20px rgba(180,83,9,0.25); display:flex; align-items:center; justify-content:space-between; }
+    .hist-header h2 { font-size:15px; font-weight:800; color:#fff; }
+    .hist-header p { font-size:9px; color:rgba(255,255,255,0.65); margin-top:1px; }
+    .hist-clear-btn { background:rgba(255,255,255,0.2); border:none; border-radius:8px; color:#fff; font-size:11px; font-weight:700; padding:5px 10px; cursor:pointer; }
+    .hist-tabs { display:flex; gap:6px; padding:10px 14px 0; flex-shrink:0; }
+    .hist-tab { flex:1; border:1px solid #e5e7eb; border-radius:10px; padding:8px 4px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.6); color:#9ca3af; }
+    .hist-tab.active { background:#fff; color:#b45309; border-color:#fcd34d; box-shadow:0 2px 8px rgba(180,83,9,0.07); }
+    .hist-list { flex:1; overflow-y:auto; padding:8px 14px 10px; display:flex; flex-direction:column; gap:8px; }
+    .hist-list::-webkit-scrollbar { display:none; }
+    .hist-item { background:#fff; border:1px solid rgba(180,83,9,0.1); border-radius:13px; padding:10px 12px; box-shadow:0 1px 6px rgba(180,83,9,0.06); animation:slideIn 0.2s ease; }
+    .hist-item-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+    .hist-item-date { font-size:9px; color:#9ca3af; font-weight:600; }
+    .hist-del-btn { background:#fee2e2; border:none; border-radius:6px; color:#dc2626; font-size:11px; padding:3px 8px; cursor:pointer; font-weight:700; }
+    .hist-item-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+    .hist-chip { background:#fffbeb; border:1px solid #fde68a; border-radius:7px; padding:4px 8px; }
+    .hist-chip-label { font-size:8px; color:#9ca3af; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+    .hist-chip-val { font-size:12px; font-weight:800; color:#b45309; margin-top:1px; }
+    .hist-chip.highlight { background:linear-gradient(135deg,#fef3c7,#fffbeb); border-color:#fcd34d; grid-column:1/-1; text-align:center; }
+    .hist-chip.highlight .hist-chip-val { font-size:18px; color:#92400e; }
+    .hist-empty { text-align:center; color:#d1d5db; font-size:13px; padding:40px 0; line-height:2.2; }
+    .save-hist-btn { width:100%; border:none; border-radius:11px; padding:11px; font-size:13px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#b45309,#d97706); color:#fff; box-shadow:0 3px 12px rgba(180,83,9,0.3); margin-top:6px; flex-shrink:0; }
+
+    .lam-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .lam-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lam-input-wrap { position: relative; }
+    .lam-input {
+      width: 100%; background: #fafafa; border: 1.5px solid #e5e7eb;
+      border-radius: 10px; padding: 10px 36px 10px 12px;
+      color: #431a03; font-size: 15px; font-weight: 700;
+      outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s;
+    }
+    .lam-input:focus { border-color: #f59e0b; background: #fffbeb; }
+    .lam-input::placeholder { color: #d1d5db; font-weight: 400; font-size: 11px; }
+    .lam-unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 800; color: #d97706; }
+    .lam-input-label { font-size: 9px; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; display: block; }
+
+    /* ingredient boxes */
+    .ing-box { border-radius: 11px; padding: 8px 10px; }
+    .ing-box.dam  { background: #fff7ed; border: 1.5px solid #fed7aa; }
+    .ing-box.oh   { background: #fefce8; border: 1.5px solid #fde047; }
+    .ing-box.nco  { background: #fff1f2; border: 1.5px solid #fca5a5; }
+    .ing-box-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .ing-box.dam .ing-box-label { color: #c2410c; }
+    .ing-box.oh  .ing-box-label { color: #a16207; }
+    .ing-box.nco .ing-box-label { color: #dc2626; }
+    .ing-input {
+      width: 100%; background: transparent; border: none; outline: none;
+      font-size: 15px; font-weight: 800; appearance: none; -webkit-appearance: none;
+    }
+    .ing-box.dam .ing-input { color: #c2410c; }
+    .ing-box.oh  .ing-input { color: #854d0e; }
+    .ing-box.nco .ing-input { color: #dc2626; }
+    .ing-input::placeholder { color: rgba(0,0,0,0.15); font-weight: 400; font-size: 12px; }
+    .ing-unit-label { font-size: 9px; font-weight: 700; margin-top: 2px; }
+    .ing-box.dam .ing-unit-label { color: #fed7aa; }
+    .ing-box.oh  .ing-unit-label { color: #fde047; }
+    .ing-box.nco .ing-unit-label { color: #fca5a5; }
+
+    /* LAM RESULT */
+    .lam-result { flex: 1; min-height: 140px; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+    .lam-result.empty { background: #fff; border: 1.5px dashed #fcd34d; align-items: center; justify-content: center; color: #fbbf24; font-size: 12px; line-height: 2; text-align: center; }
+    .lam-result.filled { background: #fff; border: 1.5px solid rgba(180,83,9,0.15); box-shadow: 0 4px 20px rgba(180,83,9,0.1); animation: popIn 0.25s ease; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+
+    .lam-top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lam-big-box { border-radius: 11px; padding: 9px 12px; text-align: center; }
+    .lam-big-box.total { background: linear-gradient(135deg, #fff7ed, #fed7aa); border: 1.5px solid #fb923c; }
+    .lam-big-box.sqm   { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd; }
+    .lam-big-box.gsm   { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1.5px solid #fbbf24; }
+    .lam-big-box-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+    .lam-big-box.total .lam-big-box-label { color: #c2410c; }
+    .lam-big-box.sqm   .lam-big-box-label { color: #2563eb; }
+    .lam-big-box.gsm   .lam-big-box-label { color: #b45309; }
+    .lam-big-val { font-size: 24px; font-weight: 900; line-height: 1; }
+    .lam-big-box.total .lam-big-val { color: #c2410c; }
+    .lam-big-box.sqm   .lam-big-val { color: #1d4ed8; }
+    .lam-big-box.gsm   .lam-big-val { color: #92400e; }
+    .lam-big-unit { font-size: 10px; font-weight: 700; margin-left: 2px; }
+
+    /* ratio row */
+    .ratio-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .ratio-box { border-radius: 9px; padding: 6px 8px; text-align: center; }
+    .ratio-box.dam { background: #fff7ed; border: 1px solid #fed7aa; }
+    .ratio-box.oh  { background: #fefce8; border: 1px solid #fde047; }
+    .ratio-box.nco { background: #fff1f2; border: 1px solid #fca5a5; }
+    .ratio-box-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ratio-box.dam .ratio-box-label { color: #c2410c; }
+    .ratio-box.oh  .ratio-box-label { color: #a16207; }
+    .ratio-box.nco .ratio-box-label { color: #dc2626; }
+    .ratio-val { font-size: 15px; font-weight: 900; margin-top: 2px; }
+    .ratio-box.dam .ratio-val { color: #c2410c; }
+    .ratio-box.oh  .ratio-val { color: #854d0e; }
+    .ratio-box.nco .ratio-val { color: #dc2626; }
+    .ratio-pct { font-size: 9px; font-weight: 700; }
+    .ratio-box.dam .ratio-pct { color: #fb923c; }
+    .ratio-box.oh  .ratio-pct { color: #ca8a04; }
+    .ratio-box.nco .ratio-pct { color: #ef4444; }
+
+    .lam-formula-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 6px 10px; font-size: 9px; color: #6b7280; text-align: center; line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<!-- ========== PAGE 1: FILM ROLL CALCULATOR ========== -->
+<div class="page active" id="calcPage">
+  <div class="header">
+    <div class="header-left">
+      <h1>🎞️ Film Roll Calculator</h1>
+      <p>Weight ↔ Length Converter</p>
+    </div>
+    <div class="header-badge">KG ↔ MTR</div>
+  </div>
+  <div class="content">
+
+    <div class="card">
+      <label class="field-label">📦 Material</label>
+      <div class="select-wrapper">
+        <div class="select-box" id="c1_selectBox" onclick="toggleDropdown('c1')">
+          <span class="sel-name" id="c1_selName">— Material પસંદ કરો —</span>
+          <span class="sel-arrow" id="c1_selArrow">▼</span>
+        </div>
+        <div class="dropdown-list" id="c1_dropdownList"></div>
+      </div>
+      <div class="density-badge">
+        <span class="d-label">DENSITY</span>
+        <span class="d-val" id="c1_densityVal">—</span>
+        <span class="d-unit">g/cm³</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="input-grid">
+        <div>
+          <label class="field-label">📏 Width (mm)</label>
+          <input class="input-field" type="number" inputmode="decimal" id="c1_width" placeholder="e.g. 1000" oninput="c1_recalc()"/>
+        </div>
+        <div>
+          <label class="field-label">🔬 Micron (μ)</label>
+          <input class="input-field" type="number" inputmode="decimal" id="c1_micron" placeholder="e.g. 30" oninput="c1_recalc()"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="convert-row">
+        <div class="convert-side">
+          <div class="convert-label kg-label">⚖️ KG નાખો</div>
+          <div class="big-input-wrap">
+            <input class="big-input kg-input" type="number" inputmode="decimal" id="c1_kg" placeholder="KG..." oninput="c1_fromKg()"/>
+            <span class="input-unit kg-unit">KG</span>
+          </div>
+        </div>
+        <div class="arrow-divider">⇄</div>
+        <div class="convert-side">
+          <div class="convert-label meter-label">📏 Meter નાખો</div>
+          <div class="big-input-wrap">
+            <input class="big-input meter-input" type="number" inputmode="decimal" id="c1_meter" placeholder="MTR..." oninput="c1_fromMeter()"/>
+            <span class="input-unit meter-unit">MTR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-card empty" id="c1_result">
+      <div>🎞️</div><div>Material, Width, Micron</div><div>KG અથવા Meter નાખો</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="showPage('calcPage',0)">
+      <span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span>
+    </button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)">
+      <span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span>
+    </button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)">
+      <span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span>
+    </button>
+    <button class="nav-btn" onclick="showPage('masterPage',3)">
+      <span class="nav-icon">📋</span><span class="nav-label">Materials</span><span class="nav-dot"></span>
+    </button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+  <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+
+<!-- ========== PAGE 2: GSM / PRINTING CALCULATOR ========== -->
+<div class="page" id="gsmPage">
+  <div class="header">
+    <div class="header-left">
+      <h1>🖨️ Printing GSM Calculator</h1>
+      <p>Ink Consumption & GSM Output</p>
+    </div>
+    <div class="header-badge">GSM</div>
+  </div>
+  <div class="content">
+
+    <!-- Material + Micron -->
+    <div class="card">
+      <label class="field-label">📦 Material</label>
+      <div class="select-wrapper">
+        <div class="select-box" id="c2_selectBox" onclick="toggleDropdown('c2')">
+          <span class="sel-name" id="c2_selName">— Material પસંદ કરો —</span>
+          <span class="sel-arrow" id="c2_selArrow">▼</span>
+        </div>
+        <div class="dropdown-list" id="c2_dropdownList"></div>
+      </div>
+      <div class="density-badge" style="margin-top:6px">
+        <span class="d-label">DENSITY</span>
+        <span class="d-val" id="c2_densityVal">—</span>
+        <span class="d-unit">g/cm³</span>
+      </div>
+    </div>
+
+    <!-- Width + Micron -->
+    <div class="card">
+      <div class="input-grid">
+        <div>
+          <label class="field-label">📏 Width (mm)</label>
+          <input class="input-field" type="number" inputmode="decimal" id="c2_width" placeholder="e.g. 1000" oninput="c2_calc()"/>
+        </div>
+        <div>
+          <label class="field-label">🔬 Micron (μ)</label>
+          <input class="input-field" type="number" inputmode="decimal" id="c2_micron" placeholder="e.g. 30" oninput="c2_calc()"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unwinder / Rewinder -->
+    <div class="card">
+      <label class="field-label">⚖️ Roll Weight</label>
+      <div class="roll-grid">
+        <div class="roll-box unwind">
+          <div class="roll-box-label">🔵 Unwinder</div>
+          <input class="roll-input" type="number" inputmode="decimal" id="c2_unwind" placeholder="0.000" oninput="c2_calc()"/>
+          <div class="roll-unit">KG</div>
+        </div>
+        <div class="roll-box rewind">
+          <div class="roll-box-label">🟢 Rewinder</div>
+          <input class="roll-input" type="number" inputmode="decimal" id="c2_rewind" placeholder="0.000" oninput="c2_calc()"/>
+          <div class="roll-unit">KG</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Running Meters -->
+    <div class="card">
+      <label class="field-label">📏 Running Meters</label>
+      <div class="gsm-input-wrap">
+        <input class="gsm-input" type="number" inputmode="decimal" id="c2_runmtr" placeholder="Meter નાખો..." oninput="c2_calc()"/>
+        <span class="gsm-unit">MTR</span>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="gsm-result empty" id="c2_result">
+      <div>🖨️</div><div>બધી વિગત ભરો</div><div>Result અહીં દેખાશે</div>
+    </div>
+
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('masterPage',3)"><span class="nav-icon">📋</span><span class="nav-label">Materials</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+  <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+
+<!-- ========== PAGE 3: LAMINATION GSM CALCULATOR ========== -->
+<div class="page" id="lamPage">
+  <div class="header">
+    <div class="header-left">
+      <h1>🧪 Lamination GSM Calc</h1>
+      <p>Dam · OH (Hardener) · NCO (Base)</p>
+    </div>
+    <div class="header-badge">LAM</div>
+  </div>
+  <div class="content">
+
+    <!-- Rubber Size + Running Mtr -->
+    <div class="card">
+      <div class="lam-2col">
+        <div>
+          <label class="lam-input-label">📏 Rubber Size (mm)</label>
+          <div class="lam-input-wrap">
+            <input class="lam-input" type="number" inputmode="decimal" id="l_rubber" placeholder="e.g. 540" oninput="l_calc()"/>
+            <span class="lam-unit">MM</span>
+          </div>
+        </div>
+        <div>
+          <label class="lam-input-label">🔄 Running Meter</label>
+          <div class="lam-input-wrap">
+            <input class="lam-input" type="number" inputmode="decimal" id="l_runmtr" placeholder="e.g. 5000" oninput="l_calc()"/>
+            <span class="lam-unit">MTR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dam / OH / NCO -->
+    <div class="card">
+      <label class="field-label">⚗️ Adhesive Input (KG)</label>
+      <div class="lam-3col">
+        <div class="ing-box dam">
+          <div class="ing-box-label">🟠 Dam</div>
+          <input class="ing-input" type="number" inputmode="decimal" id="l_dam" placeholder="0.000" oninput="l_calc()"/>
+          <div class="ing-unit-label">KG</div>
+        </div>
+        <div class="ing-box oh">
+          <div class="ing-box-label">🟡 OH</div>
+          <input class="ing-input" type="number" inputmode="decimal" id="l_oh" placeholder="0.000" oninput="l_calc()"/>
+          <div class="ing-unit-label">KG</div>
+        </div>
+        <div class="ing-box nco">
+          <div class="ing-box-label">🔴 NCO</div>
+          <input class="ing-input" type="number" inputmode="decimal" id="l_nco" placeholder="0.000" oninput="l_calc()"/>
+          <div class="ing-unit-label">KG</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="lam-result empty" id="l_result">
+      <div>🧪</div><div>બધી વિગત ભરો</div><div>Result અહીં દેખાશે</div>
+    </div>
+
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('masterPage',3)"><span class="nav-icon">📋</span><span class="nav-label">Materials</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+  <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+
+<!-- ========== PAGE 4: MATERIAL MASTER LIST ========== -->
+<div class="page" id="masterPage">
+  <div class="master-header-bar">
+    <div>
+      <h2>📋 Material Master List</h2>
+      <p>Material અને Density ઉમેરો / Edit કરો</p>
+    </div>
+  </div>
+  <div class="content">
+    <div class="add-form">
+      <div class="add-form-title">➕ નવું Material ઉમેરો</div>
+      <div class="add-row">
+        <input class="add-input" type="text" id="newMatName" placeholder="Material નામ..."/>
+        <input class="add-input" type="number" inputmode="decimal" id="newMatDen" placeholder="Density"/>
+        <button class="add-btn" onclick="addMaterial()">+</button>
+      </div>
+    </div>
+    <div class="mat-list" id="matList"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('masterPage',3)"><span class="nav-icon">📋</span><span class="nav-label">Materials</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+  <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+
+<!-- ========== PAGE 6: HISTORY ========== -->
+<div class="page" id="historyPage">
+  <div class="hist-header">
+    <div>
+      <h2>🕐 History</h2>
+      <p>Calculations ની history</p>
+    </div>
+    <button class="hist-clear-btn" onclick="clearCurrentHistory()">🗑️ Clear</button>
+  </div>
+  <div class="hist-tabs">
+    <button class="hist-tab active" onclick="switchHistTab('film')" id="htab_film">🎞️ Film</button>
+    <button class="hist-tab" onclick="switchHistTab('gsm')" id="htab_gsm">🖨️ GSM</button>
+    <button class="hist-tab" onclick="switchHistTab('lam')" id="htab_lam">🧪 Lam</button>
+  </div>
+  <div class="hist-list" id="histList"></div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('masterPage',3)"><span class="nav-icon">📋</span><span class="nav-label">Materials</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+  <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+
+<!-- ========== PAGE 7: SETTINGS ========== -->
+<div class="page" id="settingsPage">
+  <div class="settings-header">
+    <h2>⚙️ Settings</h2>
+    <p>App theme customize કરો</p>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="settings-section-title">🎨 Theme Color પસંદ કરો</div>
+      <div class="theme-grid">
+        <div class="theme-swatch" onclick="applyTheme('mustard')">
+          <div class="theme-circle selected" id="sw_mustard" style="background:linear-gradient(135deg,#b45309,#d97706)"></div>
+          <span class="theme-name">Mustard</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('blue')">
+          <div class="theme-circle" id="sw_blue" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)"></div>
+          <span class="theme-name">Blue</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('green')">
+          <div class="theme-circle" id="sw_green" style="background:linear-gradient(135deg,#065f46,#10b981)"></div>
+          <span class="theme-name">Green</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('red')">
+          <div class="theme-circle" id="sw_red" style="background:linear-gradient(135deg,#991b1b,#ef4444)"></div>
+          <span class="theme-name">Red</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('purple')">
+          <div class="theme-circle" id="sw_purple" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6)"></div>
+          <span class="theme-name">Purple</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('pink')">
+          <div class="theme-circle" id="sw_pink" style="background:linear-gradient(135deg,#9d174d,#ec4899)"></div>
+          <span class="theme-name">Pink</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('teal')">
+          <div class="theme-circle" id="sw_teal" style="background:linear-gradient(135deg,#0f766e,#14b8a6)"></div>
+          <span class="theme-name">Teal</span>
+        </div>
+        <div class="theme-swatch" onclick="applyTheme('dark')">
+          <div class="theme-circle" id="sw_dark" style="background:linear-gradient(135deg,#1f2937,#374151)"></div>
+          <span class="theme-name">Dark</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('formulaPage',7)"><span class="nav-icon">📐</span><span class="nav-label">Formula</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+<!-- ========== FORMULA PAGE ========== -->
+<div class="page" id="formulaPage">
+  <div class="header">
+    <div class="header-left">
+      <h1>📐 Calculator Formulas</h1>
+      <p>All formulas reference guide</p>
+    </div>
+    <div class="header-badge">📐</div>
+  </div>
+  <div class="content">
+
+    <!-- Film Roll -->
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🎞️</div>
+        <div><div style="font-size:13px;font-weight:800;color:#1d4ed8;">Film Roll Calculator</div><div style="font-size:10px;color:#9ca3af;">KG ↔ Meter</div></div>
+      </div>
+      <div style="background:#eff6ff;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:700;color:#1e40af;margin-bottom:4px;">Step 1 — KG per Meter</div>
+        <div style="font-size:12px;color:#1e3a5f;font-family:monospace;background:#dbeafe;border-radius:7px;padding:6px 10px;">
+          KG/Mtr = Width(m) × Micron(m) × Density × 1000
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:#dbeafe;border-radius:10px;padding:8px 10px;text-align:center;">
+          <div style="font-size:9px;color:#1e40af;font-weight:700;text-transform:uppercase;">KG → Meter</div>
+          <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:3px;font-family:monospace;">Meter = KG ÷ KG/Mtr</div>
+        </div>
+        <div style="background:#dbeafe;border-radius:10px;padding:8px 10px;text-align:center;">
+          <div style="font-size:9px;color:#1e40af;font-weight:700;text-transform:uppercase;">Meter → KG</div>
+          <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:3px;font-family:monospace;">KG = Meter × KG/Mtr</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Printing GSM -->
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🖨️</div>
+        <div><div style="font-size:13px;font-weight:800;color:#9d174d;">Printing GSM Calculator</div><div style="font-size:10px;color:#9ca3af;">Coating Weight → GSM</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="background:#fce7f3;border-radius:10px;padding:8px 12px;">
+          <div style="font-size:9px;color:#9d174d;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Sq. Meter</div>
+          <div style="font-size:12px;font-weight:800;color:#831843;font-family:monospace;">Sq.Mtr = Width(m) × Running Mtr</div>
+        </div>
+        <div style="background:#fce7f3;border-radius:10px;padding:8px 12px;">
+          <div style="font-size:9px;color:#9d174d;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Coating Weight</div>
+          <div style="font-size:12px;font-weight:800;color:#831843;font-family:monospace;">Coating = Rewinder − Unwinder</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);border:1.5px solid #f9a8d4;border-radius:10px;padding:8px 12px;text-align:center;">
+          <div style="font-size:9px;color:#9d174d;font-weight:700;text-transform:uppercase;margin-bottom:3px;">📊 GSM Formula</div>
+          <div style="font-size:13px;font-weight:900;color:#831843;font-family:monospace;">GSM = (Coating × 1000) ÷ Sq.Mtr</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lamination GSM -->
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🧪</div>
+        <div><div style="font-size:13px;font-weight:800;color:#065f46;">Lamination GSM Calculator</div><div style="font-size:10px;color:#9ca3af;">Dam · OH · NCO → GSM</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="background:#d1fae5;border-radius:10px;padding:8px 12px;">
+          <div style="font-size:9px;color:#065f46;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Sq. Meter</div>
+          <div style="font-size:12px;font-weight:800;color:#064e3b;font-family:monospace;">Sq.Mtr = Rubber(m) × Running Mtr</div>
+        </div>
+        <div style="background:#d1fae5;border-radius:10px;padding:8px 12px;">
+          <div style="font-size:9px;color:#065f46;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Net Adhesive</div>
+          <div style="font-size:12px;font-weight:800;color:#064e3b;font-family:monospace;">Net = (OH + NCO) − Dam</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);border:1.5px solid #6ee7b7;border-radius:10px;padding:8px 12px;text-align:center;">
+          <div style="font-size:9px;color:#065f46;font-weight:700;text-transform:uppercase;margin-bottom:3px;">📊 GSM Formula</div>
+          <div style="font-size:13px;font-weight:900;color:#064e3b;font-family:monospace;">GSM = (Net × 1000) ÷ Sq.Mtr</div>
+        </div>
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:8px 12px;text-align:center;">
+          <div style="font-size:9px;color:#a16207;font-weight:700;text-transform:uppercase;margin-bottom:3px;">⚖️ Ratio</div>
+          <div style="font-size:13px;font-weight:900;color:#854d0e;font-family:monospace;">Ratio = OH ÷ NCO</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('calcPage',0)"><span class="nav-icon">🎞️</span><span class="nav-label">Film</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('gsmPage',1)"><span class="nav-icon">🖨️</span><span class="nav-label">GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('lamPage',2)"><span class="nav-icon">🧪</span><span class="nav-label">Lam GSM</span><span class="nav-dot"></span></button>
+    <button class="nav-btn active" onclick="showPage('formulaPage',7)"><span class="nav-icon">📐</span><span class="nav-label">Formula</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('historyPage',5)"><span class="nav-icon">🕐</span><span class="nav-label">History</span><span class="nav-dot"></span></button>
+    <button class="nav-btn" onclick="showPage('settingsPage',6)"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span><span class="nav-dot"></span></button>
+  </div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const DEFAULT_MATERIALS = [
+  { name: "PET (Polyester Film)", density: 1.40 },
+  { name: "BOPP (Biaxially Oriented PP)", density: 0.91 },
+  { name: "Aluminum Foil", density: 2.70 },
+  { name: "CPP (Cast Polypropylene)", density: 0.91 },
+  { name: "LD (Low Density PE Film)", density: 0.93 },
+  { name: "Milky LD", density: 0.95 },
+];
+
+function loadMaterials() {
+  try { const s = localStorage.getItem('roto_materials'); return s ? JSON.parse(s) : [...DEFAULT_MATERIALS]; } catch(e) { return [...DEFAULT_MATERIALS]; }
+}
+function saveMaterials() {
+  try { localStorage.setItem('roto_materials', JSON.stringify(materials)); } catch(e) {}
+}
+let materials = loadMaterials();
+let c1_sel = -1, c2_sel = -1;
+
+// ==================== PAGE SWITCH ====================
+function showPage(pageId, navIdx) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  if (pageId === 'masterPage') renderMasterList();
+  if (pageId === 'calcPage') buildDropdown('c1');
+  if (pageId === 'gsmPage') buildDropdown('c2');
+  if (pageId === 'historyPage') renderHistory();
+}
+
+// ==================== DROPDOWN ====================
+function buildDropdown(prefix) {
+  const list = document.getElementById(prefix + '_dropdownList');
+  list.innerHTML = '';
+  const selIdx = prefix === 'c1' ? c1_sel : c2_sel;
+  materials.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'dropdown-item' + (i === selIdx ? ' active' : '');
+    div.innerHTML = `<span class="item-name">${m.name}</span><span class="item-den">${m.density} g/cm³</span>`;
+    div.onclick = () => selectMaterial(prefix, i);
+    list.appendChild(div);
+  });
+}
+
+function toggleDropdown(prefix) {
+  const box = document.getElementById(prefix + '_selectBox');
+  const dl = document.getElementById(prefix + '_dropdownList');
+  box.classList.toggle('open');
+  dl.classList.toggle('open');
+  document.getElementById(prefix + '_selArrow').textContent = dl.classList.contains('open') ? '▲' : '▼';
+}
+
+function closeDropdown(prefix) {
+  document.getElementById(prefix + '_dropdownList').classList.remove('open');
+  document.getElementById(prefix + '_selectBox').classList.remove('open');
+  document.getElementById(prefix + '_selArrow').textContent = '▼';
+}
+
+function selectMaterial(prefix, i) {
+  if (prefix === 'c1') c1_sel = i; else c2_sel = i;
+  document.getElementById(prefix + '_selName').textContent = materials[i].name;
+  document.getElementById(prefix + '_densityVal').textContent = materials[i].density;
+  document.querySelectorAll('#' + prefix + '_dropdownList .dropdown-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  closeDropdown(prefix);
+  if (prefix === 'c1') c1_recalc(); else c2_calc();
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.select-wrapper')) {
+    ['c1','c2'].forEach(p => {
+      const dl = document.getElementById(p + '_dropdownList');
+      if (dl) { dl.classList.remove('open'); document.getElementById(p + '_selectBox').classList.remove('open'); document.getElementById(p + '_selArrow').textContent = '▼'; }
+    });
+  }
+});
+
+// ==================== FILM ROLL CALC ====================
+function c1_kgPerMeter() {
+  if (c1_sel < 0) return null;
+  const w = parseFloat(document.getElementById('c1_width').value);
+  const t = parseFloat(document.getElementById('c1_micron').value);
+  if (!w || !t) return null;
+  return (w/1000) * (t/1000000) * materials[c1_sel].density * 1000;
+}
+
+function c1_showResult(kg, meter, kpm) {
+  const maxRef = 0.20;
+  const pct = Math.min((kpm/maxRef)*100, 100).toFixed(0);
+  let rc = '#10b981', rl = 'Light';
+  if (kpm >= 0.10) { rc = '#ef4444'; rl = 'Heavy'; }
+  else if (kpm >= 0.05) { rc = '#f59e0b'; rl = 'Medium'; }
+  const w = parseFloat(document.getElementById('c1_width').value);
+  const el = document.getElementById('c1_result');
+  el.className = 'result-card filled';
+  el.innerHTML = `
+    <div class="res-top">
+      <div class="res-item"><div class="res-item-label">⚖️ Weight</div><div><span class="res-item-val kg-res-val">${kg}</span><span class="res-item-unit kg-res-unit">KG</span></div></div>
+      <div class="res-divider-v"></div>
+      <div class="res-item"><div class="res-item-label">📏 Length</div><div><span class="res-item-val meter-res-val">${meter}</span><span class="res-item-unit meter-res-unit">MTR</span></div></div>
+    </div>
+    <div class="res-divider-h"></div>
+    <div class="rate-box">
+      <div class="rate-title"><div class="rate-title-dot"></div>Film Weight Rate Indicator<span style="margin-left:auto;background:${rc}20;color:${rc};font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid ${rc}40">${rl}</span></div>
+      <div class="gauge-wrap"><div class="gauge-fill" style="width:${pct}%;background:linear-gradient(90deg,#fbbf24,${rc})"></div></div>
+      <div class="gauge-labels"><span class="gauge-label">Light</span><span class="gauge-label" style="color:#b45309;font-weight:800">${kpm.toFixed(4)} kg/m</span><span class="gauge-label">Heavy</span></div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-label">KG/Mtr</div><div class="stat-val">${kpm.toFixed(4)}</div><div class="stat-unit">kg/m</div></div>
+        <div class="stat-box"><div class="stat-label">Mtr/KG</div><div class="stat-val">${(1/kpm).toFixed(2)}</div><div class="stat-unit">m/kg</div></div>
+        <div class="stat-box"><div class="stat-label">GSM</div><div class="stat-val">${(kpm*1000/(w/1000)).toFixed(1)}</div><div class="stat-unit">g/m²</div></div>
+      </div>
+    </div>`;
+}
+
+function c1_showEmpty() { const el=document.getElementById('c1_result'); el.className='result-card empty'; el.innerHTML='<div>🎞️</div><div>Material, Width, Micron</div><div>KG અથવા Meter નાખો</div>'; }
+function c1_fromKg() { document.getElementById('c1_meter').value=''; const kpm=c1_kgPerMeter(); const kg=parseFloat(document.getElementById('c1_kg').value); if(!kpm||!kg){c1_showEmpty();return;} c1_showResult(kg.toFixed(3),(kg/kpm).toFixed(2),kpm); }
+function c1_fromMeter() { document.getElementById('c1_kg').value=''; const kpm=c1_kgPerMeter(); const m=parseFloat(document.getElementById('c1_meter').value); if(!kpm||!m){c1_showEmpty();return;} c1_showResult((m*kpm).toFixed(3),m.toFixed(2),kpm); }
+function c1_recalc() { if(document.getElementById('c1_kg').value) c1_fromKg(); else if(document.getElementById('c1_meter').value) c1_fromMeter(); else c1_showEmpty(); }
+
+// ==================== GSM CALC ====================
+function c2_calc() {
+  if (c2_sel < 0) { c2_empty(); return; }
+  const w   = parseFloat(document.getElementById('c2_width').value);
+  const mic = parseFloat(document.getElementById('c2_micron').value);
+  const uw  = parseFloat(document.getElementById('c2_unwind').value);
+  const rw  = parseFloat(document.getElementById('c2_rewind').value);
+  const rm  = parseFloat(document.getElementById('c2_runmtr').value);
+  if (!w || !mic || !uw || !rw || !rm) { c2_empty(); return; }
+
+  const widthM    = w / 1000;                          // mm → m
+  const sqm       = widthM * rm;                       // Sq. Meter = Width(m) × Running Mtr
+  const coatingWt = rw - uw;                           // Coating Weight = Rewinder − Unwinder (KG)
+  // GSM = Coating Weight(g) / Sq.Mtr = (coatingWt × 1000) / sqm
+  const gsmVal    = (coatingWt * 1000) / sqm;
+  // Coating weight in grams
+  const coatingG  = coatingWt * 1000;
+
+  const el = document.getElementById('c2_result');
+  el.className = 'gsm-result filled';
+  el.innerHTML = `
+    <div class="gsm-main-row">
+      <div class="gsm-big-box sqm">
+        <div class="gsm-box-label">📐 Sq. Meter</div>
+        <div><span class="gsm-big-val">${sqm.toFixed(2)}</span><span class="gsm-big-unit">m²</span></div>
+      </div>
+      <div class="gsm-big-box gsm">
+        <div class="gsm-box-label">📊 GSM</div>
+        <div><span class="gsm-big-val">${gsmVal.toFixed(2)}</span><span class="gsm-big-unit">g/m²</span></div>
+      </div>
+    </div>
+    <div class="ink-box">
+      <div>
+        <div class="ink-label">🎨 Coating Weight</div>
+        <div style="font-size:9px;color:#be185d;margin-top:2px">Rewinder − Unwinder = ${rw} − ${uw} KG</div>
+      </div>
+      <div><span class="ink-val">${coatingWt >= 0 ? '+' : ''}${coatingWt.toFixed(3)}</span><span class="ink-unit">KG</span></div>
+    </div>
+    <div class="gsm-stats">
+      <div class="gsm-stat"><div class="gsm-stat-label">Coating (g)</div><div class="gsm-stat-val">${coatingG.toFixed(1)}</div><div class="gsm-stat-unit">gram</div></div>
+      <div class="gsm-stat"><div class="gsm-stat-label">Sq. Meter</div><div class="gsm-stat-val">${sqm.toFixed(2)}</div><div class="gsm-stat-unit">m²</div></div>
+      <div class="gsm-stat"><div class="gsm-stat-label">Run Mtr</div><div class="gsm-stat-val">${rm.toFixed(0)}</div><div class="gsm-stat-unit">m</div></div>
+    </div>
+    <div style="margin-top:6px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:7px 12px;font-size:10px;color:#6b7280;text-align:center;">
+      📐 Formula: Coating Wt(g) ÷ Sq.Mtr × 1000 = GSM<br>
+      <span style="color:#b45309;font-weight:700">${coatingG.toFixed(1)}g ÷ ${sqm.toFixed(2)}m² × 1000 = ${gsmVal.toFixed(2)} g/m²</span>
+    </div>`;
+}
+
+function c2_empty() { const el=document.getElementById('c2_result'); el.className='gsm-result empty'; el.innerHTML='<div>🖨️</div><div>બધી વિગત ભરો</div><div>Result અહીં દેખાશે</div>'; }
+
+// ==================== MASTER LIST ====================
+function renderMasterList() {
+  const container = document.getElementById('matList');
+  container.innerHTML = '';
+  if (materials.length === 0) { container.innerHTML = '<div class="empty-list">📦<br>કોઈ Material નથી<br>ઉપર ઉમેરો</div>'; return; }
+  materials.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'mat-item'; div.id = 'matItem_' + i;
+    div.innerHTML = `
+      <div class="mat-item-left">
+        <div class="mat-item-name">${m.name}</div>
+        <div class="mat-item-den">Density: ${m.density} g/cm³</div>
+      </div>
+      <div class="mat-item-right">
+        <button class="edit-btn" onclick="editItem(${i})">✏️</button>
+        <button class="del-btn" onclick="deleteItem(${i})">🗑️</button>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function addMaterial() {
+  const name = document.getElementById('newMatName').value.trim();
+  const density = parseFloat(document.getElementById('newMatDen').value);
+  if (!name || !density) { alert('Material નામ અને Density બંને નાખો!'); return; }
+  materials.push({ name, density });
+  saveMaterials();
+  document.getElementById('newMatName').value = '';
+  document.getElementById('newMatDen').value = '';
+  renderMasterList();
+}
+
+function deleteItem(i) {
+  const name = materials[i].name;
+  const overlay = document.createElement('div');
+  overlay.id = 'deleteDialog';
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:flex;align-items:center;justify-content:center;
+    z-index:9999;padding:20px;`;
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;">
+      <div style="font-size:36px;margin-bottom:10px;">🗑️</div>
+      <div style="font-size:15px;font-weight:800;color:#1f2937;margin-bottom:6px;">Delete કરવું છે?</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px;padding:8px 12px;background:#f9fafb;border-radius:10px;">${name}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button onclick="document.getElementById('deleteDialog').remove()" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
+        <button onclick="confirmDelete(${i})" style="background:#dc2626;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">Delete</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function confirmDelete(i) {
+  const dlg = document.getElementById('deleteDialog');
+  if (dlg) dlg.remove();
+  if (c1_sel === i) { c1_sel=-1; document.getElementById('c1_selName').textContent='— Material પસંદ કરો —'; document.getElementById('c1_densityVal').textContent='—'; }
+  else if (c1_sel > i) c1_sel--;
+  if (c2_sel === i) { c2_sel=-1; document.getElementById('c2_selName').textContent='— Material પસંદ કરો —'; document.getElementById('c2_densityVal').textContent='—'; }
+  else if (c2_sel > i) c2_sel--;
+  materials.splice(i, 1);
+  saveMaterials();
+  renderMasterList();
+}
+
+function editItem(i) {
+  const item = document.getElementById('matItem_' + i);
+  item.classList.add('editing');
+  item.innerHTML = `<div class="edit-row">
+    <input class="add-input" id="editName_${i}" value="${materials[i].name}" style="font-size:12px;padding:6px 8px"/>
+    <input class="add-input" type="number" id="editDen_${i}" value="${materials[i].density}" style="font-size:12px;padding:6px 8px"/>
+    <button class="save-btn" onclick="saveEdit(${i})">✔</button>
+    <button class="cancel-btn" onclick="renderMasterList()">✕</button>
+  </div>`;
+}
+
+function saveEdit(i) {
+  const name = document.getElementById('editName_' + i).value.trim();
+  const density = parseFloat(document.getElementById('editDen_' + i).value);
+  if (!name || !density) { alert('નામ અને Density ભરો!'); return; }
+  materials[i] = { name, density };
+  if (c1_sel===i) { document.getElementById('c1_selName').textContent=name; document.getElementById('c1_densityVal').textContent=density; }
+  if (c2_sel===i) { document.getElementById('c2_selName').textContent=name; document.getElementById('c2_densityVal').textContent=density; }
+  saveMaterials();
+  renderMasterList();
+}
+
+// ==================== LAMINATION GSM CALC ====================
+function l_calc() {
+  const rubber = parseFloat(document.getElementById('l_rubber').value);
+  const runmtr = parseFloat(document.getElementById('l_runmtr').value);
+  const dam    = parseFloat(document.getElementById('l_dam').value) || 0;
+  const oh     = parseFloat(document.getElementById('l_oh').value)  || 0;
+  const nco    = parseFloat(document.getElementById('l_nco').value) || 0;
+
+  if (!rubber || !runmtr || (!dam && !oh && !nco)) { l_empty(); return; }
+
+  const widthM   = rubber / 1000;                 // mm → m
+  const sqm      = widthM * runmtr;               // Sq. Meter
+  const totalOhNco = oh + nco;                    // Total OH + NCO
+  const netAdh   = totalOhNco - dam;              // Net adhesive = (OH + NCO) - Dam
+  const gsm      = (netAdh / sqm) * 1000;         // GSM = ((OH+NCO-Dam) / Sq.Mtr) × 1000
+
+  // Ratio percentages
+  const total3   = dam + oh + nco;
+  const damPct = total3 > 0 ? (dam / total3 * 100).toFixed(1) : 0;
+  const ohPct  = total3 > 0 ? (oh  / total3 * 100).toFixed(1) : 0;
+  const ncoPct = total3 > 0 ? (nco / total3 * 100).toFixed(1) : 0;
+
+  const el = document.getElementById('l_result');
+  el.className = 'lam-result filled';
+  el.innerHTML = `
+    <div class="lam-top-row">
+      <div class="lam-big-box total">
+        <div class="lam-big-box-label">⚗️ Total OH+NCO</div>
+        <div><span class="lam-big-val">${totalOhNco.toFixed(2)}</span><span class="lam-big-unit">KG</span></div>
+      </div>
+      <div class="lam-big-box sqm">
+        <div class="lam-big-box-label">📐 Sq. Meter</div>
+        <div><span class="lam-big-val">${sqm.toFixed(2)}</span><span class="lam-big-unit">m²</span></div>
+      </div>
+    </div>
+    <div class="lam-big-box gsm" style="text-align:center;padding:8px 12px;">
+      <div class="lam-big-box-label">📊 GSM (Adhesive)</div>
+      <div><span class="lam-big-val" style="font-size:30px">${gsm.toFixed(2)}</span><span class="lam-big-unit">g/m²</span></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#fef9c3,#fef08a);border:1.5px solid #fde047;border-radius:12px;padding:12px 16px;text-align:center;">
+      <div style="font-size:9px;font-weight:700;color:#a16207;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">⚖️ OH : NCO Ratio</div>
+      <div style="font-size:36px;font-weight:900;color:#92400e;line-height:1;">${nco > 0 ? (oh/nco).toFixed(2) : '—'}</div>
+      <div style="font-size:10px;color:#a16207;font-weight:700;margin-top:3px;">OH per NCO</div>
+    </div>`;
+  saveLamHistory();
+}
+
+function l_empty() {
+  const el = document.getElementById('l_result');
+  el.className = 'lam-result empty';
+  el.innerHTML = '<div>🧪</div><div>બધી વિગત ભરો</div><div>Result અહીં દેખાશે</div>';
+}
+
+// ==================== THEME SYSTEM ====================
+const THEMES = {
+  mustard: { bg:'linear-gradient(160deg,#fffbeb 0%,#fef3c7 60%,#fff8e1 100%)', h1:'#b45309', h2:'#d97706', accent:'#b45309', accent2:'#d97706', label:'#92400e', statBg:'#fffbeb', statBorder:'#fde68a', border:'#fcd34d', border2:'#fde68a', cardBorder:'rgba(180,83,9,0.12)', shadow:'rgba(180,83,9,0.25)', navActive:'#fffbeb', navLabel:'#b45309', dot:'#d97706', bodyBg:'#fffbeb', text:'#431a03' },
+  blue:    { bg:'linear-gradient(160deg,#eff6ff 0%,#dbeafe 60%,#eff6ff 100%)', h1:'#1d4ed8', h2:'#3b82f6', accent:'#1d4ed8', accent2:'#3b82f6', label:'#1e40af', statBg:'#eff6ff', statBorder:'#bfdbfe', border:'#93c5fd', border2:'#bfdbfe', cardBorder:'rgba(29,78,216,0.12)', shadow:'rgba(29,78,216,0.25)', navActive:'#eff6ff', navLabel:'#1d4ed8', dot:'#3b82f6', bodyBg:'#eff6ff', text:'#1e3a5f' },
+  green:   { bg:'linear-gradient(160deg,#f0fdf4 0%,#dcfce7 60%,#f0fdf4 100%)', h1:'#065f46', h2:'#10b981', accent:'#065f46', accent2:'#10b981', label:'#065f46', statBg:'#f0fdf4', statBorder:'#a7f3d0', border:'#6ee7b7', border2:'#a7f3d0', cardBorder:'rgba(6,95,70,0.12)', shadow:'rgba(6,95,70,0.25)', navActive:'#f0fdf4', navLabel:'#065f46', dot:'#10b981', bodyBg:'#f0fdf4', text:'#052e16' },
+  red:     { bg:'linear-gradient(160deg,#fff1f2 0%,#ffe4e6 60%,#fff1f2 100%)', h1:'#991b1b', h2:'#ef4444', accent:'#991b1b', accent2:'#ef4444', label:'#991b1b', statBg:'#fff1f2', statBorder:'#fecaca', border:'#fca5a5', border2:'#fecaca', cardBorder:'rgba(153,27,27,0.12)', shadow:'rgba(153,27,27,0.25)', navActive:'#fff1f2', navLabel:'#991b1b', dot:'#ef4444', bodyBg:'#fff1f2', text:'#450a0a' },
+  purple:  { bg:'linear-gradient(160deg,#f5f3ff 0%,#ede9fe 60%,#f5f3ff 100%)', h1:'#5b21b6', h2:'#8b5cf6', accent:'#5b21b6', accent2:'#8b5cf6', label:'#4c1d95', statBg:'#f5f3ff', statBorder:'#ddd6fe', border:'#c4b5fd', border2:'#ddd6fe', cardBorder:'rgba(91,33,182,0.12)', shadow:'rgba(91,33,182,0.25)', navActive:'#f5f3ff', navLabel:'#5b21b6', dot:'#8b5cf6', bodyBg:'#f5f3ff', text:'#2e1065' },
+  pink:    { bg:'linear-gradient(160deg,#fdf2f8 0%,#fce7f3 60%,#fdf2f8 100%)', h1:'#9d174d', h2:'#ec4899', accent:'#9d174d', accent2:'#ec4899', label:'#831843', statBg:'#fdf2f8', statBorder:'#fbcfe8', border:'#f9a8d4', border2:'#fbcfe8', cardBorder:'rgba(157,23,77,0.12)', shadow:'rgba(157,23,77,0.25)', navActive:'#fdf2f8', navLabel:'#9d174d', dot:'#ec4899', bodyBg:'#fdf2f8', text:'#500724' },
+  teal:    { bg:'linear-gradient(160deg,#f0fdfa 0%,#ccfbf1 60%,#f0fdfa 100%)', h1:'#0f766e', h2:'#14b8a6', accent:'#0f766e', accent2:'#14b8a6', label:'#115e59', statBg:'#f0fdfa', statBorder:'#99f6e4', border:'#5eead4', border2:'#99f6e4', cardBorder:'rgba(15,118,110,0.12)', shadow:'rgba(15,118,110,0.25)', navActive:'#f0fdfa', navLabel:'#0f766e', dot:'#14b8a6', bodyBg:'#f0fdfa', text:'#042f2e' },
+  dark:    { bg:'linear-gradient(160deg,#1f2937 0%,#111827 60%,#1f2937 100%)', h1:'#374151', h2:'#4b5563', accent:'#f9fafb', accent2:'#e5e7eb', label:'#d1d5db', statBg:'#374151', statBorder:'#4b5563', border:'#4b5563', border2:'#6b7280', cardBorder:'rgba(255,255,255,0.08)', shadow:'rgba(0,0,0,0.4)', navActive:'#374151', navLabel:'#f9fafb', dot:'#9ca3af', bodyBg:'#1f2937', text:'#f9fafb' },
+};
+
+let currentTheme = 'mustard';
+
+function applyTheme(name) {
+  const t = THEMES[name]; if (!t) return;
+  currentTheme = name;
+  try { localStorage.setItem('roto_theme', name); } catch(e) {}
+
+  // Pages background
+  document.querySelectorAll('.page').forEach(p => p.style.background = t.bg);
+  document.body.style.background = t.bodyBg;
+  document.body.style.color = t.text;
+
+  // Headers
+  document.querySelectorAll('.header, .settings-header, .master-header-bar, .hist-header').forEach(h => {
+    h.style.background = `linear-gradient(135deg,${t.h1},${t.h2})`;
+    h.style.boxShadow = `0 4px 20px ${t.shadow}`;
+  });
+
+  // Nav
+  document.querySelectorAll('.bottom-nav').forEach(n => n.style.borderTopColor = t.border2);
+  document.querySelectorAll('.nav-btn.active').forEach(b => b.style.background = t.navActive);
+  document.querySelectorAll('.nav-btn.active .nav-label').forEach(l => l.style.color = t.navLabel);
+  document.querySelectorAll('.nav-dot').forEach(d => d.style.background = t.dot);
+
+  // Cards
+  document.querySelectorAll('.card, .add-form').forEach(c => {
+    c.style.borderColor = t.cardBorder;
+  });
+
+  // Select boxes
+  document.querySelectorAll('.select-box').forEach(s => { s.style.background = t.bodyBg; s.style.borderColor = t.border; });
+  document.querySelectorAll('.density-badge').forEach(b => { b.style.background = t.bodyBg; b.style.borderColor = t.border; });
+
+  // Stat boxes
+  document.querySelectorAll('.stat-box, .gsm-stat').forEach(s => { s.style.background = t.statBg; s.style.borderColor = t.statBorder; });
+
+  // Hist chips
+  document.querySelectorAll('.hist-chip').forEach(c => { c.style.background = t.statBg; c.style.borderColor = t.statBorder; });
+  document.querySelectorAll('.hist-chip-val').forEach(v => v.style.color = t.accent);
+  document.querySelectorAll('.hist-tab.active').forEach(b => { b.style.color = t.accent; b.style.borderColor = t.border; });
+
+  // Swatch selection
+  document.querySelectorAll('.theme-circle').forEach(c => c.classList.remove('selected'));
+  const sw = document.getElementById('sw_' + name);
+  if (sw) sw.classList.add('selected');
+}
+
+function loadSavedTheme() {
+  try { const s = localStorage.getItem('roto_theme'); if (s && THEMES[s]) applyTheme(s); } catch(e) {}
+}
+
+// ==================== INIT ====================
+buildDropdown('c1');
+buildDropdown('c2');
+loadSavedTheme();
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
